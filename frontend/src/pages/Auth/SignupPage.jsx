@@ -46,15 +46,15 @@ function SignupPage() {
   }
 
   return (
-    <main id="auth-main" className="min-h-screen bg-accent-soft">
-      <div className="grid min-h-screen lg:grid-cols-2">
+    <main id="auth-main" className="min-h-screen min-h-dvh! bg-accent-soft">
+      <div className="grid min-h-screen min-h-dvh! lg:grid-cols-2">
         {/* Left photo panel */}
         <section className="relative hidden flex-col justify-between overflow-hidden text-white lg:flex">
           <LazyBg
             image="/images/health/doctor-tablet.jpg"
             className="absolute inset-0 bg-cover bg-center"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-primary-900 via-primary-900/70 to-primary-900/35" />
+          <div className="absolute inset-0 bg-linear-to-t from-primary-900 via-primary-900/70 to-primary-900/35" />
           <div className="absolute inset-0 bg-[radial-gradient(120%_70%_at_50%_0%,rgba(0,0,0,0)_0%,rgba(5,19,39,0.55)_100%)]" />
           <div className="relative flex items-start justify-between p-12">
             <LogoMark />
@@ -82,7 +82,7 @@ function SignupPage() {
         </section>
 
         {/* Right panel */}
-        <section className="flex flex-col justify-center px-6 py-12 md:px-16">
+        <section className="flex flex-col justify-start px-6 py-12 md:px-16 lg:justify-center">
           <div className="mx-auto w-full max-w-md">
             <div className="mb-6 flex justify-center lg:hidden">
               <LogoMark />

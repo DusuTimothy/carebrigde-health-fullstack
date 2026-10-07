@@ -116,7 +116,7 @@ function PublicLayout() {
 
 function AuthLayout() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen min-h-dvh!">
       <a href="#auth-main" className="skip-link">Skip to main content</a>
       <Outlet />
     </div>

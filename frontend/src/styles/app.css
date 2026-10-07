@@ -13,6 +13,10 @@
     text-rendering: optimizeLegibility;
   }
 
+  html {
+    scroll-padding-bottom: 3rem;
+  }
+
   ::selection {
     background: var(--color-primary-100);
   }
