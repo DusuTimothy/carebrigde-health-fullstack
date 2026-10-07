@@ -1,0 +1,17 @@
+{
+  "name": "Carebridge Health",
+  "short_name": "Carebridge",
+  "description": "World-class, compassionate healthcare for Nigeria — find a doctor, book an appointment and manage your care online.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#051327",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

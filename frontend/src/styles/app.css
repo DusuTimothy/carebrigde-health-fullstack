@@ -1,0 +1,194 @@
+/* ==========================================================================
+   Application stylesheet — Tailwind v4
+   ========================================================================== */
+@import 'tailwindcss';
+@import './theme.css';
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    background: var(--color-surface-page);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: var(--color-primary-100);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    letter-spacing: -0.01em;
+  }
+}
+
+/* Screen-reader-only + skip link */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -100%;
+  z-index: 800;
+  background: var(--color-surface-raised);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  font-weight: var(--font-weight-medium);
+  transition: top 180ms ease;
+}
+
+.skip-link:focus {
+  top: 1rem;
+}
+
+/* Scrollbar subtlety for portal nav overflow rows */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+@keyframes cb-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes cb-modal-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes cb-toast-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes cb-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.animate-fade-in { animation: cb-fade-in 180ms ease; }
+.animate-modal-in { animation: cb-modal-in 180ms ease; }
+.animate-toast-in { animation: cb-toast-in 180ms ease; }
+.animate-pulse-dot { animation: cb-pulse 1.6s ease-in-out infinite; }
+
+/* ==========================================================================
+   UCLA-influenced imagery & gradient utilities (Carebridge branded)
+   ========================================================================== */
+
+/* Brand gradient — signature navy→blue used for heroes & feature bands */
+.bg-brand-gradient {
+  background-image: linear-gradient(118deg, #051327 0%, #0B2440 30%, #12365C 58%, #2E6EAB 100%);
+}
+.bg-brand-gradient-deep {
+  background-image: linear-gradient(160deg, #051327 0%, #081B32 45%, #0F2F52 100%);
+}
+.bg-navy-radial {
+  background-image: radial-gradient(120% 90% at 78% 12%, rgba(0, 146, 206, 0.35), transparent 46%),
+    radial-gradient(80% 70% at 22% 92%, rgba(255, 209, 0, 0.14), transparent 55%),
+    linear-gradient(118deg, #051327 0%, #0B2440 34%, #12365C 62%, #2E6EAB 100%);
+}
+/* Cyan glow band for CTAs / accents */
+.bg-cyanic {
+  background-image: linear-gradient(135deg, #0092CE 0%, #0077AC 55%, #12365C 130%);
+}
+/* Gold flare used behind award / ranking content */
+.bg-gold-flare {
+  background-image: radial-gradient(120% 150% at 50% 0%, rgba(255, 209, 0, 0.9) 0%, rgba(255, 209, 0, 0) 60%);
+}
+
+/* Hero text shadow so white type stays legible over imagery */
+.hero-shadow {
+  text-shadow: 0 1px 0 rgba(5, 19, 39, 0.2), 0 2px 24px rgba(5, 19, 39, 0.55);
+}
+
+/* Display serif for editorial headlines (UCLA uses a display serif for heroes) */
+.font-display {
+  font-family: 'Newsreader', 'Iowan Old Style', Georgia, serif;
+  letter-spacing: -0.015em;
+}
+
+/* --------------------------------------------------------------------------
+   Media tiles: photographic image panels with a navy legibility overlay.
+   The photo URL is set inline as `background-image` (local images are
+   vendored under /images/health). Tiles read like the photo cards on the
+   reference site — photo, subtle navy tint, caption sits over the darker
+   lower half.
+   -------------------------------------------------------------------------- */
+.media-tile {
+  position: relative;
+  overflow: hidden;
+  background-color: #12365C;
+  background-position: center;
+  background-size: cover;
+}
+.media-tile::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(5, 19, 39, 0.14) 0%, rgba(5, 19, 39, 0.06) 38%, rgba(5, 19, 39, 0.62) 100%),
+    linear-gradient(0deg, rgba(5, 19, 39, 0.42), rgba(5, 19, 39, 0.08) 60%, rgba(5, 19, 39, 0.04) 100%);
+}
+.media-tile::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 4px);
+  opacity: 0.4;
+}
+
+/* tone variants — kept for compatibility; they bias the overlay hue slightly */
+.mt-deep { background-color: #051327; }
+.mt-cyan { background-color: #043046; }
+.mt-gold { background-color: #332900; }
+.mt-sky  { background-color: #12365C; }
+.mt-graphite { background-color: #1C242E; }
+
+/* Fine edge "frame line" so tiles read like photos */
+.media-edge {
+  outline: 1px solid rgba(5, 19, 39, 0.12);
+  outline-offset: -1px;
+}
+
+/* Deterministic content vignette for interior page heroes */
+.media-art {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  box-shadow: 0 24px 60px rgba(5, 19, 39, 0.4);
+}
+.media-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -40px 80px rgba(5, 19, 39, 0.35);
+}
+
+/* Respect users who prefer reduced motion: kill animations & smooth scroll */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

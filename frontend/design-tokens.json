@@ -1,0 +1,112 @@
+{
+  "meta": {
+    "name": "carebridge-health",
+    "version": "1.0.0",
+    "description": "Single source of truth for all visual tokens. Do NOT edit theme.css directly - run `npm run tokens` after editing this file."
+  },
+  "color": {
+    "primary": {
+      "50": "#E8F1FA",
+      "100": "#C9DDF2",
+      "200": "#9BBFE5",
+      "300": "#5E97CF",
+      "400": "#2E6EAB",
+      "500": "#12365C",
+      "600": "#0F2F52",
+      "700": "#0B2440",
+      "800": "#081B32",
+      "900": "#051327"
+    },
+    "secondary": {
+      "50": "#E0F4FB",
+      "100": "#B9E8F7",
+      "200": "#7FD0EC",
+      "300": "#3DB4DE",
+      "400": "#0092CE",
+      "500": "#0077AC",
+      "600": "#00608D",
+      "700": "#004C70",
+      "800": "#003953",
+      "900": "#043046"
+    },
+    "gold": {
+      "50": "#FFFBDB",
+      "100": "#FFF4AE",
+      "200": "#FFE86A",
+      "300": "#FFDA1F",
+      "400": "#FFD100",
+      "500": "#E5BC00",
+      "600": "#C29800",
+      "700": "#997A00",
+      "800": "#6B5600",
+      "900": "#493C00"
+    },
+    "neutral": {
+      "0": "#FFFFFF",
+      "50": "#F7F9FB",
+      "100": "#EEF2F6",
+      "200": "#DDE3EA",
+      "300": "#BBC6D2",
+      "400": "#8E9AA8",
+      "500": "#606E7D",
+      "600": "#47545F",
+      "700": "#363F49",
+      "800": "#27303A",
+      "900": "#1C242E"
+    },
+    "semantic": {
+      "success": { "bg": "#E2F5EC", "text": "#0B6A3C", "border": "#8FD0AC", "solid": "#1D9E75" },
+      "warning": { "bg": "#FFF4E6", "text": "#8A5300", "border": "#EACB93", "solid": "#E0A63B" },
+      "danger": { "bg": "#FCEBEB", "text": "#A32D2D", "border": "#E8B3B3", "solid": "#C94444" },
+      "info": { "bg": "#E8F1FA", "text": "#0F2F52", "border": "#9BBFE5", "solid": "#12365C" }
+    }
+  },
+  "typography": {
+    "family": {
+      "sans": "'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif"
+    },
+    "size": {
+      "xs": "0.75rem",
+      "sm": "0.8125rem",
+      "md": "0.9375rem",
+      "base": "1rem",
+      "lg": "1.125rem",
+      "xl": "1.25rem",
+      "2xl": "1.5rem",
+      "3xl": "1.875rem",
+      "4xl": "2.375rem",
+      "5xl": "3rem"
+    },
+    "weight": { "regular": 400, "medium": 500, "semibold": 600, "bold": 700 },
+    "lineHeight": { "tight": 1.2, "snug": 1.35, "normal": 1.5, "relaxed": 1.65 }
+  },
+  "spacing": {
+    "0": "0",
+    "0.5": "0.125rem",
+    "1": "0.25rem",
+    "1.5": "0.375rem",
+    "2": "0.5rem",
+    "3": "0.75rem",
+    "4": "1rem",
+    "5": "1.25rem",
+    "6": "1.5rem",
+    "7": "1.75rem",
+    "8": "2rem",
+    "9": "2.25rem",
+    "10": "2.5rem",
+    "11": "2.75rem",
+    "12": "3rem",
+    "14": "3.5rem",
+    "16": "4rem",
+    "20": "5rem",
+    "24": "6rem"
+  },
+  "radius": { "sm": "4px", "md": "8px", "lg": "12px", "xl": "16px", "full": "999px" },
+  "shadow": {
+    "sm": "0 1px 2px rgba(18, 54, 92, 0.08)",
+    "md": "0 2px 10px rgba(18, 54, 92, 0.10)",
+    "lg": "0 14px 36px rgba(5, 19, 39, 0.18)"
+  },
+  "z": { "base": 0, "sticky": 100, "dropdown": 200, "modal": 500, "toast": 700 },
+  "duration": { "fast": "120ms", "base": "180ms", "slow": "280ms" }
+}
