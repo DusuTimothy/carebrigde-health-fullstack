@@ -31,7 +31,12 @@ export const initializeDatabase = async () => {
     console.log('Database connected successfully.');
     return sequelizeInstance;
   } catch (error) {
-    console.error('Unable to connect to the database:', error.message);
+    const cause = error.parent || error.original || error.cause;
+    const causeMessage = cause?.errors?.map((causeError) => causeError.message).filter(Boolean).join('; ');
+    console.error(
+      'Unable to connect to the database:',
+      causeMessage || cause?.message || error.message || error.name,
+    );
     throw error;
   }
 };

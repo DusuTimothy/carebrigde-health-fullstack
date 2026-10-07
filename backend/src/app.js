@@ -68,7 +68,7 @@ app.use(express.urlencoded({ extended: true, limit: '20kb' }));
 app.use(morgan('combined'));
 
 // CORS configuration (origin comes from env; comma-separated list supported)
-const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5174')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
