@@ -95,7 +95,7 @@ function SignupPage() {
                 <Input label="Last name" value={form.last} onChange={(e) => setForm({ ...form, last: e.target.value })} required />
               </div>
               <Input label="Email" type="email" icon={Mail} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-              <Input label="Password" type="password" icon={Lock} hint="Use at least 6 characters (maximum 72 UTF-8 bytes)." minLength={6} maxLength={72} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+              <Input label="Password" type="password" icon={Lock} hint="Use at least 6 characters (maximum 72 characters)." minLength={6} maxLength={72} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
               <Input label="Date of birth" type="date" value={form.dob} onChange={(e) => setForm({ ...form, dob: e.target.value })} required />
               {error && <p className="text-xs text-danger-ink">{error}</p>}
               <Button type="submit" block size="lg">Create account</Button>
