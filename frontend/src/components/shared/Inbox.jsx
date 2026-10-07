@@ -3,11 +3,11 @@ import { useSearchParams } from 'react-router-dom';
 import { Send } from 'lucide-react';
 import { useDB } from '../../lib/db.js';
 import { useAuth } from '../../lib/auth.jsx';
-import Avatar from '../../components/ui/Avatar.jsx';
-import Button from '../../components/ui/Button.jsx';
-import { Textarea } from '../../components/ui/Input.jsx';
-import { Card, CardHead } from '../../components/ui/Card.jsx';
-import { EmptyState } from '../../components/ui/EmptyState.jsx';
+import Avatar from '../ui/Avatar.jsx';
+import Button from '../ui/Button.jsx';
+import { Textarea } from '../ui/Input.jsx';
+import { Card, CardHead } from '../ui/Card.jsx';
+import { EmptyState } from '../ui/EmptyState.jsx';
 import { timeAgo, formatDateTime } from '../../lib/format.js';
 import cn from '../../lib/cn.js';
 
