@@ -64,7 +64,7 @@ backend/
     services/           admissions, orders, billing, patients
     validators/         Zod schemas (registration, users, assets, clinical…)
     utils/              ApiError, apiResponse, pagination, patient-number
-    scripts/manageAdmin.js   admin CLI (create/list/promote, reset password)
+    scripts/manageAdmin.js   staff CLI (create --role, list, promote, reset password)
   tests/                Jest + Supertest suite (owns hospital_db_test)
   README.md             full endpoint-by-endpoint API reference
 frontend/
@@ -122,9 +122,29 @@ behind any static host / CDN; run the API with `npm start`.
 | `JWT_SECRET` | — | Secret used to sign JWTs (long, random, server-only) |
 | `JWT_EXPIRES_IN` | `7d` | Access-token lifetime |
 | `CORS_ORIGIN` | `http://localhost:5173` | Comma-separated allowed browser origins |
+| `CLIENT_URL` | `CORS_ORIGIN` | Public frontend origin used to build email verification / reset links |
+| `RESEND_API_KEY` | — | Resend API key (backend only); unset in dev captures mail in a dev outbox |
+| `EMAIL_FROM` | — | Verified Resend sender, e.g. `Carebridge Health <no-reply@yourdomain.com>` |
 
 All `DB_*` values are environment-only — never use a `VITE_` prefix. In production the API
-refuses to start when TLS is disabled or `JWT_SECRET` is missing/short.
+refuses to start when TLS is disabled or `JWT_SECRET` is missing/short. `RESEND_API_KEY` is
+server-only and is never exposed through a `VITE_` variable.
+
+### Transactional email (Resend)
+
+Signup verification and password reset email is sent through
+[Resend](https://resend.com) from the backend. To configure it:
+
+1. Create an API key at <https://resend.com/api-keys> and set `RESEND_API_KEY`.
+2. Add and verify a sending **domain** (or sender address) in Resend, then set
+   `EMAIL_FROM` to it (for quick tests, Resend's `onboarding@resend.dev` sender can only
+   email the account owner).
+3. Set `CLIENT_URL` to the deployed frontend URL so links resolve correctly.
+4. In production, set all three as host environment variables (never commit them).
+
+Without `RESEND_API_KEY`, development and test mode capture messages in an in-memory
+outbox (no tokens are logged) so the flows can be exercised locally; production responds
+with a clear `502` instead of pretending an email was sent.
 
 ## Demo accounts
 
@@ -153,15 +173,19 @@ You can also log in directly with the seeded accounts (all passwords are `Passwo
 
 Public signup (`/auth/signup`) always creates a **patient** account and auto-generates a patient
 profile; split `firstName`/`lastName`/`dateOfBirth` are accepted and persisted. To provision
-staff manually without the portal API, use the admin CLI:
+staff manually without the portal API, use the staff CLI (`--role` defaults to `admin`):
 
 ```bash
-cd backend
-node src/scripts/manageAdmin.js create --name "System Admin" --email admin@hospital.com --password Secret123 --phone +233200000000
-node src/scripts/manageAdmin.js promote --email user@hospital.com --role admin
-node src/scripts/manageAdmin.js reset-password --email admin@hospital.com --password NewSecret123
-node src/scripts/manageAdmin.js list
+npm run user:create -- --name "System Admin" --email admin@hospital.com --password Secret123 --role admin --phone +233200000000
+npm run user:create -- --name "Dr. Ama" --email ama@hospital.com --password Secret123 --role doctor
+npm run user:promote -- --email user@hospital.com --role nurse
+npm run user:reset-password -- --email admin@hospital.com --password NewSecret123
+npm run user:list
 ```
+
+Roles: `admin`, `doctor`, `nurse`, `receptionist`, `pharmacist`, `laboratory_staff`, `accountant`.
+Staff accounts are pre-verified; doctor/nurse logins need their clinical profile added from the
+admin portal. The raw `node src/scripts/manageAdmin.js <command>` form and `admin:*` aliases still work.
 
 ## Roles → portals
 
@@ -196,17 +220,19 @@ backend guards every route (role middleware + Zod) so a forged client cannot esc
 `/` · `/about` · `/find-a-doctor` (?search=) · `/find-a-location` · `/services` (+ `/services/:id`) ·
 `/health-library` · `/virtual-care` · `/clinical-trials` · `/news-and-insights` · `/patient-stories` ·
 `/international` · `/departments` · `/community-equity` · `/contact` · `/donate` · `/search` ·
-`/pharmacy` · `/auth/login` · `/auth/signup` · `/auth/mfa` · `/auth/reset-password`
+`/pharmacy` · `/auth/login` · `/auth/signup` · `/auth/mfa` · `/auth/reset-password` · `/auth/verify-email`
 
 ## Backend API
 
 Everything except `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/demo`,
-`/api/public/*` and `/health` requires a `Bearer` token. Response shape:
+`POST /api/auth/verify-email`, `POST /api/auth/resend-verification`,
+`POST /api/auth/forgot-password`, `POST /api/auth/reset-password`, `/api/public/*` and
+`/health` requires a `Bearer` token. Response shape:
 `{ success, message, data }`; errors: `{ success: false, message, errors[] }`.
 
 | Area | Endpoints |
 |---|---|
-| Auth | `POST /api/auth/register` · `POST /api/auth/login` · `POST /api/auth/demo` · `GET /api/auth/me` · `PUT /api/auth/update-profile` · `PUT /api/auth/change-password` · `POST /api/auth/forgot-password` |
+| Auth | `POST /api/auth/register` (email verification required before login) · `POST /api/auth/verify-email` · `POST /api/auth/resend-verification` · `POST /api/auth/login` · `POST /api/auth/demo` · `GET /api/auth/me` · `PUT /api/auth/update-profile` · `PUT /api/auth/change-password` · `POST /api/auth/forgot-password` · `POST /api/auth/reset-password` · step-up MFA endpoints |
 | Bootstrap | `GET /api/bootstrap` (full role-scoped workspace for the session) |
 | Public | `GET /api/public/site` · `/doctors` · `/products` · `/wards` · `POST /api/public/newsletter` |
 | Users (`admin`) | `GET/POST /api/users` · `GET/PUT/DELETE /api/users/:id` (cannot delete yourself) |
@@ -239,22 +265,27 @@ npm --prefix backend run lint
 npm --prefix frontend run build    # generates design tokens + production bundle
 ```
 
-The backend suite rebuilds its test database from migrations + seeders and covers auth, role
-guards, patient scoping, the admission lifecycle, order pricing/stock control, prescription
-verification, billing payments, clinical workflows and dashboards.
+The backend suite rebuilds its test database from migrations + seeders and covers auth,
+email verification and password reset (including token expiry, single-use and generic
+responses), role guards, patient scoping, the admission lifecycle, order pricing/stock
+control, prescription verification, billing payments, clinical workflows and dashboards.
 
 ## Production notes
 
 - Build the frontend (`npm run build`) and serve it behind HTTPS; deploy the API with
   `npm start`.
-- Set `NODE_ENV=production`, `DATABASE_SSL=true`, a long random `JWT_SECRET`, and your
-  `CORS_ORIGIN`. Never enable demo auth (`POST /api/auth/demo` already refuses in production).
-- Provision staff via the portal or admin CLI before launch; patients register themselves.
-- Wire up backups, monitoring, staff provisioning, email verification, MFA and operational
-  privacy controls before using real patient information.
-- Password-reset email, MFA and step-up verification are marked unavailable in the UI; this
-  codebase is not by itself a compliance certification and should not hold real patient data
-  until the remaining operational work is complete.
+- Set `NODE_ENV=production`, `DATABASE_SSL=true`, a long random `JWT_SECRET`, your
+  `CORS_ORIGIN`/`CLIENT_URL`, and the Resend variables (`RESEND_API_KEY`, `EMAIL_FROM`).
+  Never enable demo auth (`POST /api/auth/demo` already refuses in production). Without
+  `RESEND_API_KEY` in production, auth email requests fail with a `502` rather than silently
+  succeeding.
+- Provision staff via the portal or the staff CLI before launch; patients register themselves.
+  Staff accounts created by an admin are pre-verified so they can sign in immediately.
+- Wire up backups, monitoring, staff provisioning, MFA and operational privacy controls
+  before using real patient information.
+- Step-up (MFA) verification remains marked unavailable in the UI; this codebase is not by
+  itself a compliance certification and should not hold real patient data until the
+  remaining operational work is complete.
 
 ## Notes
 

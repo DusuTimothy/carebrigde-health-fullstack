@@ -71,7 +71,8 @@ export const createUser = async (req, res, next) => {
       if (!department) throw ApiError.notFound('Department not found.');
     }
 
-    const user = await models.User.create(req.body);
+    // Staff provisioned by an administrator are trusted and usable immediately.
+    const user = await models.User.create({ ...req.body, emailVerified: true });
     return createdResponse(res, user, 'User created successfully.');
   } catch (error) {
     return next(error);

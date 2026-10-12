@@ -35,6 +35,7 @@ const LoginPage = lazy(() => import('./pages/Auth/LoginPage.jsx'));
 const SignupPage = lazy(() => import('./pages/Auth/SignupPage.jsx'));
 const MfaPage = lazy(() => import('./pages/Auth/MfaPage.jsx'));
 const ResetPasswordPage = lazy(() => import('./pages/Auth/ResetPasswordPage.jsx'));
+const VerifyEmailPage = lazy(() => import('./pages/Auth/VerifyEmailPage.jsx'));
 
 /* ---------- Patient portal ---------- */
 const PatientDashboardPage = lazy(() => import('./pages/Patient/PatientDashboardPage.jsx'));
@@ -206,6 +207,7 @@ export default function App() {
                 <Route path="/auth/signup" element={<SignupPage />} />
                 <Route path="/auth/mfa" element={<MfaPage />} />
                 <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
+                <Route path="/auth/verify-email" element={<VerifyEmailPage />} />
               </Route>
 
               {/* Portal (authenticated; booking allows guest=1) */}

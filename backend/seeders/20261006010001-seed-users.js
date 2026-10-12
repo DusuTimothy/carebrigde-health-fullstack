@@ -54,6 +54,7 @@ export default {
       users.map((user) => ({
         ...user,
         password: hashed,
+        emailVerified: true,
         createdAt: now,
         updatedAt: now,
       }))

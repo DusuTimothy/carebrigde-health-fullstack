@@ -49,6 +49,11 @@ export default (sequelize) => {
         type: DataTypes.STRING(20),
         allowNull: true,
       },
+      emailVerified: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
       departmentId: {
         type: DataTypes.UUID,
         allowNull: true,

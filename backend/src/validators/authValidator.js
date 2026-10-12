@@ -94,6 +94,18 @@ export const resetPasswordSchema = z
   })
   .strict();
 
+export const verifyEmailSchema = z
+  .object({
+    token: z.string().trim().min(10).max(512),
+  })
+  .strict();
+
+export const resendVerificationSchema = z
+  .object({
+    email,
+  })
+  .strict();
+
 export const stepUpRequestSchema = z
   .object({
     purpose: z.string().trim().min(1).max(50).optional(),
@@ -115,6 +127,8 @@ export default {
   demoSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  verifyEmailSchema,
+  resendVerificationSchema,
   stepUpRequestSchema,
   stepUpVerifySchema,
 };

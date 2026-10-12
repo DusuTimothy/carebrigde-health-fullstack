@@ -14,8 +14,8 @@ export class ApiError extends Error {
     return new ApiError(401, message);
   }
 
-  static forbidden(message = 'Forbidden.') {
-    return new ApiError(403, message);
+  static forbidden(message = 'Forbidden.', errors = null) {
+    return new ApiError(403, message, errors);
   }
 
   static notFound(message = 'Resource not found.') {

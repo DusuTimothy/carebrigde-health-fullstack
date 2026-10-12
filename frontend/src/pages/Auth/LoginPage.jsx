@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Lock, Mail, AlertTriangle, UserCheck, Stethoscope, ShieldCheck, UserCog, HeartPulse, Pill, FlaskConical, ConciergeBell } from 'lucide-react';
+import { Mail, AlertTriangle, UserCheck, Stethoscope, ShieldCheck, UserCog, HeartPulse, Pill, FlaskConical, ConciergeBell, MailWarning } from 'lucide-react';
 import { useAuth, DEMO_ROLES } from '../../lib/auth.jsx';
 import Input from '../../components/ui/Input.jsx';
+import PasswordInput from '../../components/ui/PasswordInput.jsx';
 import Button from '../../components/ui/Button.jsx';
 import Alert from '../../components/ui/Alert.jsx';
+import { useToast } from '../../components/ui/Toast.jsx';
+import { apiRequest } from '../../lib/api.js';
 import { LogoMark } from '../../components/layout/PublicHeader.jsx';
 import { roleOf } from '../../lib/rbac.js';
 import { usePageMeta } from '../../lib/seo.js';
@@ -25,6 +28,7 @@ const ROLE_ICON = {
 
 function LoginPage() {
   const { login, demoLogin } = useAuth();
+  const { push } = useToast();
   usePageMeta({ title: 'Sign in', description: 'Sign in to the Carebridge Health patient portal — book appointments, view results and message your care team.' });
   const [params] = useSearchParams();
   const reason = params.get('reason');
@@ -32,18 +36,40 @@ function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [resending, setResending] = useState(false);
 
   async function submit(e) {
     e.preventDefault();
     setError('');
+    setUnverifiedEmail('');
     setBusy(true);
     try {
       const res = await login({ email, password });
       const base = roleOf(res.user)?.portalBase ?? '/portal/patient';
       window.location.assign(base);
     } catch (err) {
+      if (err.errors?.some((issue) => issue?.code === 'EMAIL_NOT_VERIFIED')) {
+        setUnverifiedEmail(email);
+      }
       setError(err.message);
       setBusy(false);
+    }
+  }
+
+  async function resendVerification() {
+    if (!unverifiedEmail) return;
+    setResending(true);
+    try {
+      await apiRequest('/api/auth/resend-verification', {
+        method: 'POST',
+        body: JSON.stringify({ email: unverifiedEmail }),
+      });
+      push('Verification email sent', `Check ${unverifiedEmail} for a new link.`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setResending(false);
     }
   }
 
@@ -103,10 +129,29 @@ function LoginPage() {
               </div>
             )}
 
+            {unverifiedEmail && (
+              <div className="mt-4">
+                <Alert tone="warning" title="Verify your email to sign in" icon={MailWarning}>
+                  <p>
+                    We sent a verification link to <span className="font-semibold">{unverifiedEmail}</span>.
+                    Open it, or resend a new link.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={resendVerification}
+                    disabled={resending}
+                    className="mt-2 font-semibold text-accent hover:text-accent-deep disabled:opacity-50"
+                  >
+                    {resending ? 'Sending…' : 'Resend verification email'}
+                  </button>
+                </Alert>
+              </div>
+            )}
+
             <form onSubmit={submit} className="mt-6 space-y-4">
               <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" icon={Mail} required autoComplete="email" />
-              <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" icon={Lock} required autoComplete="current-password" />
-              {error && <p className="text-xs text-danger-ink">{error}</p>}
+              <PasswordInput label="Password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" autoComplete="current-password" required />
+              {error && <p className="text-xs text-danger-ink" role="alert">{error}</p>}
               <div className="flex items-center justify-between text-sm">
                 <Link to="/auth/reset-password" className="font-semibold text-accent hover:text-accent-deep">Forgot password?</Link>
               </div>

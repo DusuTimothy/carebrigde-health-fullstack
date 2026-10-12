@@ -29,6 +29,7 @@ import Story from './Story.js';
 import SiteContent from './SiteContent.js';
 import CaCertificate from './CaCertificate.js';
 import PasswordResetToken from './PasswordResetToken.js';
+import EmailVerificationToken from './EmailVerificationToken.js';
 import OtpToken from './OtpToken.js';
 
 const models = {};
@@ -69,6 +70,7 @@ const initializeModels = (sequelize) => {
   models.SiteContent = SiteContent(sequelize);
   models.CaCertificate = CaCertificate(sequelize);
   models.PasswordResetToken = PasswordResetToken(sequelize);
+  models.EmailVerificationToken = EmailVerificationToken(sequelize);
   models.OtpToken = OtpToken(sequelize);
 
   // User
@@ -81,6 +83,7 @@ const initializeModels = (sequelize) => {
   models.User.belongsToMany(models.Thread, { through: models.ThreadParticipant, foreignKey: 'userId', otherKey: 'threadId', as: 'threads' });
   models.User.hasMany(models.Message, { foreignKey: 'senderId', as: 'sentMessages' });
   models.User.hasMany(models.PasswordResetToken, { foreignKey: 'userId', as: 'passwordResetTokens' });
+  models.User.hasMany(models.EmailVerificationToken, { foreignKey: 'userId', as: 'emailVerificationTokens' });
   models.User.hasMany(models.OtpToken, { foreignKey: 'userId', as: 'otpTokens' });
 
   // Department

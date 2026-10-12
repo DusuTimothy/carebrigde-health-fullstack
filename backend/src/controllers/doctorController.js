@@ -82,6 +82,7 @@ export const createDoctor = async (req, res, next) => {
         password,
         phone: payload.phone || null,
         role: 'doctor',
+        emailVerified: true,
       });
       linkedUserId = user.id;
     }

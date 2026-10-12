@@ -2,6 +2,8 @@ import 'dotenv/config';
 import request from 'supertest';
 import app from '../src/app.js';
 import { initializeDatabase, getSequelize } from '../src/config/database.js';
+import { getEmailOutbox } from '../src/services/emailService.js';
+import { hashToken } from '../src/utils/tokens.js';
 
 process.env.NODE_ENV = 'test';
 
@@ -21,6 +23,32 @@ const login = async (email, password = 'Password123!') => {
 
 const authorized = (token) => ({ Authorization: `Bearer ${token}` });
 
+/* Verification/reset emails are captured in the development outbox because the
+   test environment has no RESEND_API_KEY. Pull the raw token out of the link. */
+const tokenFromOutbox = (template, to) => {
+  const message = [...getEmailOutbox()]
+    .reverse()
+    .find((entry) => entry.template === template && entry.to === to);
+  expect(message).toBeDefined();
+  const match = message.text.match(/[?&]token=([A-Za-z0-9_\-]+)/);
+  expect(match).toBeTruthy();
+  return decodeURIComponent(match[1]);
+};
+
+const registerUser = async (overrides = {}) => {
+  const email = overrides.email || `jest.user.${Date.now()}.${Math.random().toString(16).slice(2)}@hospital.com`;
+  const payload = {
+    name: 'Jest User',
+    email,
+    password: 'Password123!',
+    phone: '+233200009999',
+    ...overrides,
+  };
+  const res = await request(app).post('/api/auth/register').send(payload);
+  expect(res.status).toBe(201);
+  return { email, password: payload.password, res };
+};
+
 beforeAll(async () => {
   server = app;
   await initializeDatabase();
@@ -35,20 +63,33 @@ afterAll(async () => {
 });
 
 describe('Auth', () => {
-  test('registers a patient and auto-creates a patient profile', async () => {
-    const email = `jest.patient.${Date.now()}@hospital.com`;
-    const res = await request(app)
-      .post('/api/auth/register')
-      .send({ name: 'Jest Patient', email, password: 'Password123!', phone: '+233200008888' });
-    expect(res.status).toBe(201);
-    expect(res.body.data.user.role).toBe('patient');
-    expect(res.body.data.token).toBeTruthy();
+  test('registers a patient unverified and auto-creates a patient profile after verification', async () => {
+    const { email, password } = await registerUser({ name: 'Jest Patient' });
+
+    // Signup no longer issues a session for an unverified account.
+    const unverified = await request(app).post('/api/auth/login').send({ email, password });
+    expect(unverified.status).toBe(403);
+    expect(unverified.body.errors?.[0]?.code).toBe('EMAIL_NOT_VERIFIED');
+
+    const token = tokenFromOutbox('email-verification', email);
+    const verified = await request(app).post('/api/auth/verify-email').send({ token });
+    expect(verified.status).toBe(200);
+
+    const login = await request(app).post('/api/auth/login').send({ email, password });
+    expect(login.status).toBe(200);
+    expect(login.body.data.token).toBeTruthy();
 
     const me = await request(app)
       .get('/api/patients/me/profile')
-      .set(authorized(res.body.data.token));
+      .set(authorized(login.body.data.token));
     expect(me.status).toBe(200);
     expect(me.body.data).toMatchObject({ email, patientNumber: expect.any(String) });
+  });
+
+  test('registration never returns a usable token', async () => {
+    const { res } = await registerUser();
+    expect(res.body.data.token).toBeUndefined();
+    expect(res.body.data.user.emailVerified).toBe(false);
   });
 
   test('rejects duplicate registration', async () => {
@@ -73,9 +114,15 @@ describe('Auth', () => {
     expect(res.status).toBe(201);
     expect(res.body.data.user.name).toBe('Jest Rodriguez');
 
+    const token = tokenFromOutbox('email-verification', email);
+    await request(app).post('/api/auth/verify-email').send({ token });
+
+    const login = await request(app)
+      .post('/api/auth/login')
+      .send({ email, password: 'Password123!' });
     const me = await request(app)
       .get('/api/patients/me/profile')
-      .set(authorized(res.body.data.token));
+      .set(authorized(login.body.data.token));
     expect(me.status).toBe(200);
     expect(me.body.data).toMatchObject({ firstName: 'Jest', lastName: 'Rodriguez', dateOfBirth: '1990-05-14' });
   });
@@ -90,6 +137,135 @@ describe('Auth', () => {
   test('requires a token for protected routes', async () => {
     const res = await request(app).get('/api/users');
     expect(res.status).toBe(401);
+  });
+});
+
+describe('Email verification and password reset', () => {
+  test('verifies an email once and rejects reuse of the same token', async () => {
+    const { email } = await registerUser();
+    const token = tokenFromOutbox('email-verification', email);
+
+    const first = await request(app).post('/api/auth/verify-email').send({ token });
+    expect(first.status).toBe(200);
+
+    const reused = await request(app).post('/api/auth/verify-email').send({ token });
+    expect(reused.status).toBe(400);
+
+    const login = await request(app)
+      .post('/api/auth/login')
+      .send({ email, password: 'Password123!' });
+    expect(login.status).toBe(200);
+  });
+
+  test('rejects an expired verification token', async () => {
+    const { email } = await registerUser();
+    const token = tokenFromOutbox('email-verification', email);
+    const sequelize = getSequelize();
+    await sequelize.models.EmailVerificationToken.update(
+      { expiresAt: new Date(Date.now() - 1000) },
+      { where: { tokenHash: hashToken(token) } }
+    );
+    const res = await request(app).post('/api/auth/verify-email').send({ token });
+    expect(res.status).toBe(400);
+  });
+
+  test('resend issues a new token and keeps the response generic', async () => {
+    const { email } = await registerUser();
+    const firstToken = tokenFromOutbox('email-verification', email);
+
+    const resend = await request(app)
+      .post('/api/auth/resend-verification')
+      .send({ email: 'nobody-' + email });
+    expect(resend.status).toBe(200);
+    expect(resend.body.data).toBeNull();
+
+    const again = await request(app).post('/api/auth/resend-verification').send({ email });
+    expect(again.status).toBe(200);
+    expect(again.body.message).toMatch(/if an account exists/i);
+
+    // The original token is invalidated when a replacement is issued.
+    const oldToken = await request(app).post('/api/auth/verify-email').send({ token: firstToken });
+    expect(oldToken.status).toBe(400);
+
+    const newToken = tokenFromOutbox('email-verification', email);
+    expect(newToken).not.toBe(firstToken);
+    const verified = await request(app).post('/api/auth/verify-email').send({ token: newToken });
+    expect(verified.status).toBe(200);
+  });
+
+  test('resets a password through the emailed link and invalidates the token', async () => {
+    const { email } = await registerUser();
+    const verification = tokenFromOutbox('email-verification', email);
+    await request(app).post('/api/auth/verify-email').send({ token: verification });
+
+    const forgot = await request(app).post('/api/auth/forgot-password').send({ email });
+    expect(forgot.status).toBe(200);
+    expect(forgot.body.data).toBeNull();
+    expect(JSON.stringify(forgot.body)).not.toMatch(/resetToken/i);
+
+    const resetToken = tokenFromOutbox('password-reset', email);
+    const reset = await request(app)
+      .post('/api/auth/reset-password')
+      .send({ token: resetToken, password: 'NewPassword456!' });
+    expect(reset.status).toBe(200);
+
+    const reused = await request(app)
+      .post('/api/auth/reset-password')
+      .send({ token: resetToken, password: 'AnotherPassword789!' });
+    expect(reused.status).toBe(400);
+
+    const oldLogin = await request(app)
+      .post('/api/auth/login')
+      .send({ email, password: 'Password123!' });
+    expect(oldLogin.status).toBe(401);
+
+    const newLogin = await request(app)
+      .post('/api/auth/login')
+      .send({ email, password: 'NewPassword456!' });
+    expect(newLogin.status).toBe(200);
+  });
+
+  test('rejects an expired password reset token', async () => {
+    const { email } = await registerUser();
+    const verification = tokenFromOutbox('email-verification', email);
+    await request(app).post('/api/auth/verify-email').send({ token: verification });
+    await request(app).post('/api/auth/forgot-password').send({ email });
+    const resetToken = tokenFromOutbox('password-reset', email);
+
+    const sequelize = getSequelize();
+    await sequelize.models.PasswordResetToken.update(
+      { expiresAt: new Date(Date.now() - 1000) },
+      { where: { tokenHash: hashToken(resetToken) } }
+    );
+
+    const res = await request(app)
+      .post('/api/auth/reset-password')
+      .send({ token: resetToken, password: 'NewPassword456!' });
+    expect(res.status).toBe(400);
+  });
+
+  test('password reset requests stay generic for unknown accounts', async () => {
+    const res = await request(app)
+      .post('/api/auth/forgot-password')
+      .send({ email: 'does-not-exist@hospital.com' });
+    expect(res.status).toBe(200);
+    expect(res.body.data).toBeNull();
+    expect(res.body.message).toMatch(/if an account exists/i);
+  });
+
+  test('rejects a confirmation field sent to the reset endpoint', async () => {
+    const { email } = await registerUser();
+    const verification = tokenFromOutbox('email-verification', email);
+    await request(app).post('/api/auth/verify-email').send({ token: verification });
+    await request(app).post('/api/auth/forgot-password').send({ email });
+    const resetToken = tokenFromOutbox('password-reset', email);
+
+    const res = await request(app).post('/api/auth/reset-password').send({
+      token: resetToken,
+      password: 'NewPassword456!',
+      confirmPassword: 'NewPassword456!',
+    });
+    expect(res.status).toBe(400);
   });
 });
 

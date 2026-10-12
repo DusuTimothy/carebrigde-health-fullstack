@@ -10,6 +10,7 @@ export default function Input({
   hint,
   error,
   icon: Icon,
+  trailing,
   className,
   containerClassName,
   ...props
@@ -23,7 +24,7 @@ export default function Input({
           {label}
         </label>
       )}
-      <div className={cn('relative', Icon && '')}>
+      <div className="relative">
         {Icon && (
           <Icon aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
         )}
@@ -39,6 +40,9 @@ export default function Input({
           )}
           {...props}
         />
+        {trailing ? (
+          <div className="absolute inset-y-0 right-1.5 z-10 flex items-center">{trailing}</div>
+        ) : null}
       </div>
       {error ? (
         <p id={`${inputId}-err`} className="text-xs text-danger-ink">

@@ -8,7 +8,7 @@ REST API for a hospital management platform built with **Node.js (ESM)**, **Expr
 - PostgreSQL, Sequelize ORM (migrations + seeders)
 - JWT auth (Bearer or cookie), bcrypt password hashing, helmet, CORS, rate limiting, morgan
 - Validation with **Zod**; tests with **Jest + Supertest**
-- Admin CLI for managing admin users
+- Staff CLI for managing staff users (create/list/promote, reset password)
 
 ## Project structure
 
@@ -29,7 +29,7 @@ src/
   utils/                   # ApiError, responses, pagination, patient-number generator
   validators/              # zod schemas
   scripts/
-    manageAdmin.js         # admin CLI (create/list/promote, reset password)
+    manageAdmin.js         # staff CLI (create --role, list, promote, reset password)
 tests/                     # Jest + Supertest integration suite
 ```
 
@@ -59,9 +59,33 @@ The server prints `Hospital API running on port 5000`. Health check: `GET /healt
 | `DATABASE_CA` | — | Path to the PostgreSQL CA certificate when using `verify-ca` or `verify-full` |
 | `JWT_SECRET` | — | Secret used to sign JWTs |
 | `JWT_EXPIRES_IN` | `7d` | Token lifetime |
-| `CLIENT_URL` | `http://localhost:5173` | Allowed CORS origin |
+| `CORS_ORIGIN` | `http://localhost:5173` | Comma-separated allowed browser origins |
+| `CLIENT_URL` | `CORS_ORIGIN` / `http://localhost:5173` | Public frontend origin used to build email verification / reset links |
+| `RESEND_API_KEY` | — | Resend API key (backend only). Empty in dev captures mail in the dev outbox |
+| `EMAIL_FROM` | — | Verified Resend sender, e.g. `Carebridge Health <no-reply@yourdomain.com>` |
 
 Since migrations/seeders run with `sequelize-cli` (`.sequelizerc` points to the same `src/config/environment.js` used by the app), the dispatch `DB_*` variables drive both the CLI and the application runtime from a single source of truth.
+
+### Email (Resend) setup
+
+Email is sent from the backend only; the API key is never exposed to the browser.
+
+1. Create a Resend account and an API key at <https://resend.com/api-keys> (`re_...`).
+2. Add and verify a sending domain or a single sender address in Resend
+   (**Domains**), then use it for `EMAIL_FROM`, e.g.
+   `EMAIL_FROM="Carebridge Health <no-reply@yourdomain.com>"`. For quick
+   testing without a domain you can use Resend's `onboarding@resend.dev`
+   sender, which can only deliver to the account owner's own address.
+3. Set `RESEND_API_KEY`, `EMAIL_FROM` and `CLIENT_URL` in the backend
+   environment (locally in `backend/.env`; in production as host env vars).
+4. Set `CLIENT_URL` to the public frontend URL so verification/reset links
+   point at the deployed app.
+
+With `NODE_ENV=development` (or `test`) and no `RESEND_API_KEY`, messages are
+captured in an in-memory outbox instead of being sent so you can exercise the
+flows without a Resend account. This outbox never logs tokens. In production a
+missing key makes email endpoints fail with a clear `502` rather than
+pretending a message was sent.
 
 ## Scripts
 
@@ -95,21 +119,43 @@ Since migrations/seeders run with `sequelize-cli` (`.sequelizerc` points to the 
 
 Seed content: 6 doctors, 8 departments, 6 patients, 7 wards (42 beds), 3 active/discharged admissions with a transfer, appointments, medical records, prescriptions, laboratory tests, 9 product categories / 26 products, 3 orders and 4 bills in mixed statuses.
 
-## Admin CLI
+## Staff CLI
+
+Create, list, promote and reset passwords for staff accounts (patients self-register).
+`create` defaults to `--role admin`; pass `--role <role>` for any staff role. Accounts
+created here are pre-verified. Doctor/nurse logins do **not** create the linked clinical
+profile — add that from the admin portal (`POST /api/doctors`).
 
 ```bash
-node src/scripts/manageAdmin.js create --name "System Admin" --email admin@hospital.com --password Secret123 --phone +233200000000
-node src/scripts/manageAdmin.js list
-node src/scripts/manageAdmin.js promote --email user@hospital.com --role admin
-node src/scripts/manageAdmin.js reset-password --email admin@hospital.com --password NewSecret123
+# from the repo root or backend/
+npm run user:create -- --name "System Admin" --email admin@hospital.com --password Secret123 --role admin --phone +233200000000
+npm run user:create -- --name "Dr. Ama" --email ama@hospital.com --password Secret123 --role doctor
+npm run user:list
+npm run user:promote -- --email user@hospital.com --role nurse
+npm run user:reset-password -- --email admin@hospital.com --password NewSecret123
 ```
+
+Roles: `admin`, `doctor`, `nurse`, `receptionist`, `pharmacist`, `laboratory_staff`, `accountant`.
+
+The underlying script (`node src/scripts/manageAdmin.js <command>`) and `admin:*` aliases
+(`admin:create`, `admin:list`, `admin:promote`, `admin:reset-password`) remain available.
 
 ## API overview
 
 All routes (except public auth/register, auth/login and `/health`) require a `Bearer` token.
 
 ### Auth
-`POST /api/auth/register` (public — always creates a `patient` and auto-generates a patient profile) · `POST /api/auth/login` · `GET /api/auth/me` · `PUT /api/auth/update-profile` · `PUT /api/auth/change-password`
+`POST /api/auth/register` · `POST /api/auth/login` · `POST /api/auth/verify-email` · `POST /api/auth/resend-verification` · `POST /api/auth/forgot-password` · `POST /api/auth/reset-password` · `POST /api/auth/demo` · `GET /api/auth/me`
+
+Public signup always creates a `patient` with `emailVerified=false` and a
+generated patient profile. It does **not** return a session token: the account
+must confirm its email first. `register`, `resend-verification` and
+`forgot-password` are rate-limited and email-delivery failures return `502`
+instead of a false success. Reset/verification endpoints accept only the
+emailed token; only a SHA-256 hash is stored and tokens are single-use and
+expiring (verification 24h, reset 1h). Login returns `403` with
+`errors[0].code = "EMAIL_NOT_VERIFIED"` for unconfirmed accounts. In production
+no raw token is ever returned by the API.
 
 ### Users (admin)
 `GET/POST /api/users` · `GET/PUT/DELETE /api/users/:id`
@@ -167,7 +213,7 @@ Import `postman/hospital-api.postman_collection.json` together with `postman/hos
 npm test
 ```
 
-The Jest suite provisions a dedicated database (`hospital_db_test`), applies all migrations + seeders, and exercises auth, role guards, patient scoping, ward/bed management, the admission lifecycle, order pricing and stock control, prescription verification, billing payments, clinical workflows and dashboards. Re-running the suite rebuilds the test database from scratch.
+The Jest suite provisions a dedicated database (`hospital_db_test`), applies all migrations + seeders, and exercises auth (signup, unverified-login rejection, email verification success/expiry/reuse, resend, password reset success/expiry/reuse, mismatched confirmation), role guards, patient scoping, ward/bed management, the admission lifecycle, order pricing and stock control, prescription verification, billing payments, clinical workflows and dashboards. The suite runs with `NODE_ENV=test`; because `RESEND_API_KEY` is unset, verification/reset emails are captured in the in-memory outbox (`src/services/emailService.js`) and parsed by the tests. Re-running the suite rebuilds the test database from scratch.
 
 ## Error handling
 

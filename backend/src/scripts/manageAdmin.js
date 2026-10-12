@@ -2,13 +2,28 @@ import 'dotenv/config';
 import bcrypt from 'bcrypt';
 import { initializeDatabase } from '../config/database.js';
 
+const STAFF_ROLES = [
+  'admin',
+  'doctor',
+  'nurse',
+  'receptionist',
+  'pharmacist',
+  'laboratory_staff',
+  'accountant',
+];
+
 const HELP = `
-Hospital Management Admin CLI
+Hospital Management Staff CLI
 Usage:
-  node src/scripts/manageAdmin.js create --name "System Admin" --email admin@hospital.com --password secret123 --phone +233200000000
-  node src/scripts/manageAdmin.js list
-  node src/scripts/manageAdmin.js promote --email admin@hospital.com [--role admin]
-  node src/scripts/manageAdmin.js reset-password --email admin@hospital.com --password newpassword
+  npm run user:create -- --name "System Admin" --email admin@hospital.com --password secret123 [--role admin] [--phone +233200000000]
+  npm run user:list
+  npm run user:promote -- --email admin@hospital.com [--role admin]
+  npm run user:reset-password -- --email admin@hospital.com --password newpassword
+
+Roles (default: admin): ${STAFF_ROLES.join(', ')}
+Patients are not created here — they self-register through the signup page.
+Doctor/nurse accounts created here are login users only; create the linked clinical
+profile from the admin portal (POST /api/doctors) when one is required.
 `;
 
 const parseArgs = (argv) => {
@@ -33,6 +48,11 @@ const createAdmin = async (args) => {
     console.error('Password must be at least 8 characters.');
     process.exit(1);
   }
+  const role = args.role || 'admin';
+  if (!STAFF_ROLES.includes(role)) {
+    console.error(`Invalid role "${role}". Allowed: ${STAFF_ROLES.join(', ')}.`);
+    process.exit(1);
+  }
 
   const sequelize = await initializeDatabase();
   const { User } = sequelize.models;
@@ -50,10 +70,12 @@ const createAdmin = async (args) => {
     email: args.email,
     phone: args.phone || null,
     password: hashed,
-    role: 'admin',
+    role,
+    emailVerified: true,
   });
-  console.log(`Admin created successfully.`);
+  console.log(`${role} account created successfully.`);
   console.log(`  ID:    ${user.id}`);
+  console.log(`  Role:  ${user.role}`);
   console.log(`  Name:  ${user.name}`);
   console.log(`  Email: ${user.email}`);
   await sequelize.close();

@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User as UserIcon, ShieldCheck, CalendarCheck, MessagesSquare, Eye, EyeOff } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Mail, User as UserIcon, ShieldCheck, CalendarCheck, MessagesSquare, MailCheck } from 'lucide-react';
 import Input from '../../components/ui/Input.jsx';
+import PasswordInput from '../../components/ui/PasswordInput.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { LogoMark } from '../../components/layout/PublicHeader.jsx';
 import { useToast } from '../../components/ui/Toast.jsx';
 import { useAuth } from '../../lib/auth.jsx';
 import { usePageMeta } from '../../lib/seo.js';
+import { apiRequest } from '../../lib/api.js';
 import { LazyBg } from '../../components/ui/Page.jsx';
 
 const PERKS = [
@@ -15,46 +17,15 @@ const PERKS = [
   { icon: ShieldCheck, text: 'Secure, NDPA-compliant portal' },
 ];
 
-function PasswordField({ label, value, onChange, visible, onToggle, hint }) {
-  const VisibilityIcon = visible ? EyeOff : Eye;
-
-  return (
-    <div className="relative">
-      <Input
-        label={label}
-        type={visible ? 'text' : 'password'}
-        icon={Lock}
-        hint={hint}
-        minLength={8}
-        maxLength={72}
-        autoComplete="new-password"
-        className="pr-12"
-        value={value}
-        onChange={onChange}
-        required
-      />
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-label={`${visible ? 'Hide' : 'Show'} ${label.toLowerCase()}`}
-        aria-pressed={visible}
-        className="absolute right-2 top-7 flex h-8 w-8 items-center justify-center rounded-md text-ink-muted hover:bg-accent-soft hover:text-ink focus:outline-none focus:ring-2 focus:ring-accent/50"
-      >
-        <VisibilityIcon aria-hidden className="h-4 w-4" />
-      </button>
-    </div>
-  );
-}
-
 function SignupPage() {
   const { push } = useToast();
-  const navigate = useNavigate();
   const { signup } = useAuth();
   usePageMeta({ title: 'Create an account', description: 'Create a Carebridge Health account to book appointments, message your care team and manage your health records.' });
   const [form, setForm] = useState({ first: '', last: '', email: '', password: '', confirmPassword: '', dob: '' });
   const [error, setError] = useState('');
-  const [passwordVisible, setPasswordVisible] = useState(false);
-  const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [resending, setResending] = useState(false);
 
   async function submit(e) {
     e.preventDefault();
@@ -67,18 +38,37 @@ function SignupPage() {
       return;
     }
     setError('');
+    setBusy(true);
     try {
-      const res = await signup({
+      // The confirmation value is checked locally and never sent to the server.
+      await signup({
         email: form.email,
         password: form.password,
         firstName: form.first,
         lastName: form.last,
         dateOfBirth: form.dob,
       });
-      push('Account created', `Welcome, ${res.user.firstName}.`);
-      navigate('/portal/patient');
+      setSubmitted(true);
     } catch (err) {
       setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resend() {
+    setError('');
+    setResending(true);
+    try {
+      await apiRequest('/api/auth/resend-verification', {
+        method: 'POST',
+        body: JSON.stringify({ email: form.email }),
+      });
+      push('Verification email sent', `We sent a new link to ${form.email}.`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setResending(false);
     }
   }
 
@@ -124,37 +114,76 @@ function SignupPage() {
             <div className="mb-6 flex justify-center lg:hidden">
               <LogoMark />
             </div>
-            <h1 className="font-display text-3xl font-medium tracking-tight text-ink sm:text-4xl">Create your account</h1>
-            <p className="mt-2 text-sm text-ink-secondary">Sign up to book visits, message your care team and manage your health.</p>
-            <form onSubmit={submit} className="mt-8 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <Input label="First name" icon={UserIcon} value={form.first} onChange={(e) => setForm({ ...form, first: e.target.value })} required />
-                <Input label="Last name" value={form.last} onChange={(e) => setForm({ ...form, last: e.target.value })} required />
+
+            {submitted ? (
+              <div className="rounded-2xl border border-line bg-surface-raised p-8">
+                <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-accent-soft text-accent">
+                  <MailCheck className="h-5 w-5" />
+                </span>
+                <h1 className="mt-4 font-display text-2xl font-medium tracking-tight text-ink">Check your inbox</h1>
+                <p className="mt-2 text-sm leading-relaxed text-ink-secondary">
+                  We created your account and sent a verification link to{' '}
+                  <span className="font-semibold text-ink">{form.email}</span>. Open it to
+                  activate your account — the link expires in 24 hours.
+                </p>
+                <p className="mt-2 text-xs leading-relaxed text-ink-muted">
+                  Didn’t get the email? Check your spam folder, or resend it below.
+                </p>
+                {error && <p className="mt-3 text-xs text-danger-ink" role="alert">{error}</p>}
+                <Button
+                  type="button"
+                  block
+                  size="lg"
+                  className="mt-5"
+                  loading={resending}
+                  onClick={resend}
+                >
+                  Resend verification email
+                </Button>
+                <p className="mt-6 text-center text-sm text-ink-muted">
+                  Already verified?{' '}
+                  <Link to="/auth/login" className="font-semibold text-accent hover:text-accent-deep">Sign in</Link>
+                </p>
               </div>
-              <Input label="Email" type="email" icon={Mail} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-              <PasswordField
-                label="Password"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                visible={passwordVisible}
-                onToggle={() => setPasswordVisible((visible) => !visible)}
-                hint="Use at least 8 characters (maximum 72 characters)."
-              />
-              <PasswordField
-                label="Confirm password"
-                value={form.confirmPassword}
-                onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
-                visible={confirmPasswordVisible}
-                onToggle={() => setConfirmPasswordVisible((visible) => !visible)}
-              />
-              <Input label="Date of birth" type="date" value={form.dob} onChange={(e) => setForm({ ...form, dob: e.target.value })} required />
-              {error && <p className="text-xs text-danger-ink">{error}</p>}
-              <Button type="submit" block size="lg">Create account</Button>
-            </form>
-            <p className="mt-6 text-center text-sm text-ink-muted">
-              Already have an account?{' '}
-              <Link to="/auth/login" className="font-semibold text-accent hover:text-accent-deep">Sign in</Link>
-            </p>
+            ) : (
+              <>
+                <h1 className="font-display text-3xl font-medium tracking-tight text-ink sm:text-4xl">Create your account</h1>
+                <p className="mt-2 text-sm text-ink-secondary">Sign up to book visits, message your care team and manage your health.</p>
+                <form onSubmit={submit} className="mt-8 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input label="First name" icon={UserIcon} value={form.first} onChange={(e) => setForm({ ...form, first: e.target.value })} required />
+                    <Input label="Last name" value={form.last} onChange={(e) => setForm({ ...form, last: e.target.value })} required />
+                  </div>
+                  <Input label="Email" type="email" icon={Mail} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+                  <PasswordInput
+                    label="Password"
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    hint="Use at least 8 characters (maximum 72 characters)."
+                    minLength={8}
+                    maxLength={72}
+                    autoComplete="new-password"
+                    required
+                  />
+                  <PasswordInput
+                    label="Confirm password"
+                    value={form.confirmPassword}
+                    onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                    minLength={8}
+                    maxLength={72}
+                    autoComplete="new-password"
+                    required
+                  />
+                  <Input label="Date of birth" type="date" value={form.dob} onChange={(e) => setForm({ ...form, dob: e.target.value })} required />
+                  {error && <p className="text-xs text-danger-ink" role="alert">{error}</p>}
+                  <Button type="submit" block size="lg" loading={busy}>Create account</Button>
+                </form>
+                <p className="mt-6 text-center text-sm text-ink-muted">
+                  Already have an account?{' '}
+                  <Link to="/auth/login" className="font-semibold text-accent hover:text-accent-deep">Sign in</Link>
+                </p>
+              </>
+            )}
           </div>
         </section>
       </div>

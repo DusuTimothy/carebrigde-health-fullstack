@@ -59,7 +59,9 @@ export const errorHandler = (err, req, res, next) => {
 
   if (statusCode >= 500) {
     console.error(`[ERROR] ${req.method} ${req.originalUrl}:`, err);
-    if (process.env.NODE_ENV === 'production') {
+    // Errors flagged as `expose` carry a deliberate, safe client message
+    // (e.g. "email could not be sent") and must not be masked in production.
+    if (process.env.NODE_ENV === 'production' && err.expose !== true) {
       message = 'Internal server error';
       errors = null;
     }

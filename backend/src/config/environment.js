@@ -2,13 +2,16 @@ import 'dotenv/config';
 import fs from 'node:fs';
 
 const buildUrl = (database) => {
-  const url =
-    process.env.DATABASE_URL ||
-    `postgres://${process.env.DB_USER }:${process.env.DB_PASSWORD || ''}@${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || 5432}/${database || process.env.DB_NAME || 'hospital_db'}`;
-  if (!process.env.DATABASE_URL) return url;
+  if (!process.env.DATABASE_URL) {
+    return `postgres://${process.env.DB_USER}:${process.env.DB_PASSWORD || ''}@${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || 5432}/${database || process.env.DB_NAME || 'hospital_db'}`;
+  }
 
-  const connectionUrl = new URL(url);
+  const connectionUrl = new URL(process.env.DATABASE_URL);
   connectionUrl.searchParams.delete('sslmode');
+  // When a target database is passed explicitly (e.g. the `_test` database),
+  // point the connection at it instead of the DATABASE_URL default. This keeps
+  // the test suite from ever running against the URL's production database.
+  if (database) connectionUrl.pathname = `/${database}`;
   return connectionUrl.toString();
 };
 

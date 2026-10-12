@@ -141,11 +141,15 @@ export function AuthProvider({ children }) {
     return result;
   }, [completeAuth]);
 
+  /* Registration no longer starts a session: the account must verify its email
+     first, so we just surface the created user and the generic response. */
   const signup = useCallback(async (account) => {
-    const result = await completeAuth('/api/auth/register', account);
-    refreshStore();
-    return result;
-  }, [completeAuth]);
+    const { data } = await apiRequest('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(account),
+    });
+    return { ok: true, user: normalizeUser(data?.user || {}), emailSent: Boolean(data?.emailSent) };
+  }, []);
 
   const demoLogin = useCallback(async (roleKey) => {
     const result = await completeAuth('/api/auth/demo', {

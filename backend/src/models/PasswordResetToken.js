@@ -17,7 +17,8 @@ export default (sequelize) => {
           key: 'id',
         },
       },
-      token: {
+      // SHA-256 hash of the single-use token that was emailed to the user.
+      tokenHash: {
         type: DataTypes.STRING(255),
         allowNull: false,
         unique: true,
