@@ -125,7 +125,7 @@ function SignupPage() {
                 <p className="mt-2 text-sm leading-relaxed text-ink-secondary">
                   We created your account and sent a verification link to{' '}
                   <span className="font-semibold text-ink">{form.email}</span>. Open it to
-                  activate your account — the link expires in 24 hours.
+                  activate your account — for security, the link expires shortly.
                 </p>
                 <p className="mt-2 text-xs leading-relaxed text-ink-muted">
                   Didn’t get the email? Check your spam folder, or resend it below.

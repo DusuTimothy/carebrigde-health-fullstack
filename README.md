@@ -126,6 +126,8 @@ behind any static host / CDN; run the API with `npm start`.
 | `BREVO_API_KEY` | — | Brevo API key (backend only); unset in dev captures mail in a dev outbox |
 | `EMAIL_FROM` | — | Verified Brevo sender, e.g. `Carebridge Health <no-reply@yourdomain.com>` |
 | `EMAIL_FROM_NAME` | `Carebridge Health` | Display name when `EMAIL_FROM` is a bare address (optional) |
+| `EMAIL_VERIFICATION_TTL_MINUTES` | `60` | Lifetime of an email-verification link, in minutes |
+| `PASSWORD_RESET_TTL_MINUTES` | `60` | Lifetime of a password-reset link, in minutes |
 
 All `DB_*` values are environment-only — never use a `VITE_` prefix. In production the API
 refuses to start when TLS is disabled or `JWT_SECRET` is missing/short. `BREVO_API_KEY` is

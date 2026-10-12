@@ -94,7 +94,7 @@ function VerifyEmailPage() {
                   : message}
               </p>
               <p className="mt-2 text-xs leading-relaxed text-ink-muted">
-                Links expire after 24 hours. Enter your email to request a new one.
+                Links are time-limited. If yours has expired, enter your email to request a new one.
               </p>
               <form onSubmit={resend} className="mt-4 space-y-4">
                 <Input

@@ -64,6 +64,8 @@ The server prints `Hospital API running on port 5000`. Health check: `GET /healt
 | `BREVO_API_KEY` | — | Brevo API key (backend only). Empty in dev captures mail in the dev outbox |
 | `EMAIL_FROM` | — | Verified Brevo sender, e.g. `Carebridge Health <no-reply@yourdomain.com>` |
 | `EMAIL_FROM_NAME` | `Carebridge Health` | Display name when `EMAIL_FROM` is a bare address (optional) |
+| `EMAIL_VERIFICATION_TTL_MINUTES` | `60` | Lifetime of an email-verification link, in minutes |
+| `PASSWORD_RESET_TTL_MINUTES` | `60` | Lifetime of a password-reset link, in minutes |
 
 Since migrations/seeders run with `sequelize-cli` (`.sequelizerc` points to the same `src/config/environment.js` used by the app), the dispatch `DB_*` variables drive both the CLI and the application runtime from a single source of truth.
 

@@ -12,6 +12,8 @@
    it never logs tokens. Production fails loudly when email is not configured.
    ========================================================================== */
 
+import { expiryInMinutes, describeMinutes } from '../utils/tokens.js';
+
 const BREVO_ENDPOINT = 'https://api.brevo.com/v3/smtp/email';
 
 export class EmailDeliveryError extends Error {
@@ -65,7 +67,9 @@ export async function sendEmail({ to, subject, text, html, template }) {
   const message = { to, subject, text, html, template, createdAt: new Date().toISOString() };
 
   const apiKey = process.env.BREVO_API_KEY;
-  if (!apiKey) {
+  // Tests never touch the network: always capture in the in-memory outbox even
+  // if a real key is present in the environment.
+  if (!apiKey || isTest()) {
     if (isProduction()) {
       throw new EmailDeliveryError(
         'Email delivery is not configured on the server. Set BREVO_API_KEY and EMAIL_FROM.'
@@ -140,12 +144,13 @@ const layout = (heading, body, ctaLabel, ctaUrl) => `
 export async function sendVerificationEmail({ to, name, token }) {
   const link = `${clientUrl()}/auth/verify-email?token=${encodeURIComponent(token)}`;
   const greeting = name ? `Hi ${name},` : 'Hi,';
+  const validFor = describeMinutes(expiryInMinutes.emailVerification);
   const subject = 'Verify your Carebridge Health email address';
   const text = [
     greeting,
     '',
     'Thanks for creating a Carebridge Health account.',
-    'Confirm your email address to activate your account (this link expires in 24 hours):',
+    `Confirm your email address to activate your account (this link expires in ${validFor}):`,
     link,
     '',
     'If you did not create this account you can ignore this email.',
@@ -157,7 +162,7 @@ export async function sendVerificationEmail({ to, name, token }) {
     text,
     html: layout(
       'Verify your email address',
-      `${greeting} Thanks for creating a Carebridge Health account. This link is valid for 24 hours.`,
+      `${greeting} Thanks for creating a Carebridge Health account. This link is valid for ${validFor}.`,
       'Verify email address',
       link
     ),
@@ -168,12 +173,13 @@ export async function sendVerificationEmail({ to, name, token }) {
 export async function sendPasswordResetEmail({ to, name, token }) {
   const link = `${clientUrl()}/auth/reset-password?token=${encodeURIComponent(token)}`;
   const greeting = name ? `Hi ${name},` : 'Hi,';
+  const validFor = describeMinutes(expiryInMinutes.passwordReset);
   const subject = 'Reset your Carebridge Health password';
   const text = [
     greeting,
     '',
     'We received a request to reset your Carebridge Health password.',
-    'Choose a new password using this link (valid for 1 hour):',
+    `Choose a new password using this link (valid for ${validFor}):`,
     link,
     '',
     'If you did not request this, you can safely ignore this email — your password will not change.',
@@ -185,7 +191,7 @@ export async function sendPasswordResetEmail({ to, name, token }) {
     text,
     html: layout(
       'Reset your password',
-      `${greeting} We received a request to reset your password. This link is valid for 1 hour. If you did not request it, you can ignore this email.`,
+      `${greeting} We received a request to reset your password. This link is valid for ${validFor}. If you did not request it, you can ignore this email.`,
       'Choose a new password',
       link
     ),
