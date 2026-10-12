@@ -61,29 +61,33 @@ The server prints `Hospital API running on port 5000`. Health check: `GET /healt
 | `JWT_EXPIRES_IN` | `7d` | Token lifetime |
 | `CORS_ORIGIN` | `http://localhost:5173` | Comma-separated allowed browser origins |
 | `CLIENT_URL` | `CORS_ORIGIN` / `http://localhost:5173` | Public frontend origin used to build email verification / reset links |
-| `RESEND_API_KEY` | — | Resend API key (backend only). Empty in dev captures mail in the dev outbox |
-| `EMAIL_FROM` | — | Verified Resend sender, e.g. `Carebridge Health <no-reply@yourdomain.com>` |
+| `BREVO_API_KEY` | — | Brevo API key (backend only). Empty in dev captures mail in the dev outbox |
+| `EMAIL_FROM` | — | Verified Brevo sender, e.g. `Carebridge Health <no-reply@yourdomain.com>` |
+| `EMAIL_FROM_NAME` | `Carebridge Health` | Display name when `EMAIL_FROM` is a bare address (optional) |
 
 Since migrations/seeders run with `sequelize-cli` (`.sequelizerc` points to the same `src/config/environment.js` used by the app), the dispatch `DB_*` variables drive both the CLI and the application runtime from a single source of truth.
 
-### Email (Resend) setup
+### Email (Brevo) setup
 
-Email is sent from the backend only; the API key is never exposed to the browser.
+Email is sent from the backend only via Brevo's transactional email API; the
+API key is never exposed to the browser.
 
-1. Create a Resend account and an API key at <https://resend.com/api-keys> (`re_...`).
-2. Add and verify a sending domain or a single sender address in Resend
-   (**Domains**), then use it for `EMAIL_FROM`, e.g.
-   `EMAIL_FROM="Carebridge Health <no-reply@yourdomain.com>"`. For quick
-   testing without a domain you can use Resend's `onboarding@resend.dev`
-   sender, which can only deliver to the account owner's own address.
-3. Set `RESEND_API_KEY`, `EMAIL_FROM` and `CLIENT_URL` in the backend
-   environment (locally in `backend/.env`; in production as host env vars).
+1. Create a Brevo account and an API key at
+   <https://app.brevo.com/settings/keys/api> (`xkeysib-...`) with the
+   **Transactional email** (SMTP/API) permission.
+2. Verify a **sender** (or your whole sending domain) in Brevo under
+   **Senders & IP → Senders/Domains**, then use it for `EMAIL_FROM`, e.g.
+   `EMAIL_FROM="Carebridge Health <no-reply@yourdomain.com>"`. Domain
+   verification requires adding Brevo's DKIM/SPF DNS records.
+3. Set `BREVO_API_KEY`, `EMAIL_FROM` (and optionally `EMAIL_FROM_NAME`) and
+   `CLIENT_URL` in the backend environment (locally in `backend/.env`; in
+   production as host env vars).
 4. Set `CLIENT_URL` to the public frontend URL so verification/reset links
    point at the deployed app.
 
-With `NODE_ENV=development` (or `test`) and no `RESEND_API_KEY`, messages are
+With `NODE_ENV=development` (or `test`) and no `BREVO_API_KEY`, messages are
 captured in an in-memory outbox instead of being sent so you can exercise the
-flows without a Resend account. This outbox never logs tokens. In production a
+flows without a Brevo account. This outbox never logs tokens. In production a
 missing key makes email endpoints fail with a clear `502` rather than
 pretending a message was sent.
 
@@ -213,7 +217,7 @@ Import `postman/hospital-api.postman_collection.json` together with `postman/hos
 npm test
 ```
 
-The Jest suite provisions a dedicated database (`hospital_db_test`), applies all migrations + seeders, and exercises auth (signup, unverified-login rejection, email verification success/expiry/reuse, resend, password reset success/expiry/reuse, mismatched confirmation), role guards, patient scoping, ward/bed management, the admission lifecycle, order pricing and stock control, prescription verification, billing payments, clinical workflows and dashboards. The suite runs with `NODE_ENV=test`; because `RESEND_API_KEY` is unset, verification/reset emails are captured in the in-memory outbox (`src/services/emailService.js`) and parsed by the tests. Re-running the suite rebuilds the test database from scratch.
+The Jest suite provisions a dedicated database (`hospital_db_test`), applies all migrations + seeders, and exercises auth (signup, unverified-login rejection, email verification success/expiry/reuse, resend, password reset success/expiry/reuse, mismatched confirmation), role guards, patient scoping, ward/bed management, the admission lifecycle, order pricing and stock control, prescription verification, billing payments, clinical workflows and dashboards. The suite runs with `NODE_ENV=test`; because `BREVO_API_KEY` is unset, verification/reset emails are captured in the in-memory outbox (`src/services/emailService.js`) and parsed by the tests. Re-running the suite rebuilds the test database from scratch.
 
 ## Error handling
 

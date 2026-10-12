@@ -1,17 +1,18 @@
-import { Resend } from 'resend';
-
 /* ==========================================================================
-   Transactional email via Resend (backend only — the API key never reaches the
+   Transactional email via Brevo (backend only — the API key never reaches the
    browser). Configuration comes from the backend environment:
-     RESEND_API_KEY  – server-only Resend API key
-     EMAIL_FROM      – verified sender, e.g. "Carebridge Health <no-reply@x.com>"
-     CLIENT_URL      – public frontend origin used to build link URLs
+     BREVO_API_KEY    – server-only Brevo API key (xkeysib-...)
+     EMAIL_FROM       – verified sender, e.g. "Carebridge Health <no-reply@x.com>"
+     EMAIL_FROM_NAME  – optional display name when EMAIL_FROM is a bare address
+     CLIENT_URL       – public frontend origin used to build link URLs
 
-   In non-production environments without RESEND_API_KEY, messages are kept in
+   In non-production environments without BREVO_API_KEY, messages are kept in
    an in-memory outbox instead of being sent. This is a development/testing
    convenience only: it lets tests and local work inspect the emailed link, and
    it never logs tokens. Production fails loudly when email is not configured.
    ========================================================================== */
+
+const BREVO_ENDPOINT = 'https://api.brevo.com/v3/smtp/email';
 
 export class EmailDeliveryError extends Error {
   constructor(message = 'We could not send the email right now. Please try again.', cause) {
@@ -36,10 +37,13 @@ export const clearEmailOutbox = () => {
   outbox.length = 0;
 };
 
-let client = null;
-const getClient = () => {
-  if (!client) client = new Resend(process.env.RESEND_API_KEY);
-  return client;
+/* Accepts `"Name <addr@x.com>"` or a bare address; falls back to a display
+   name so Brevo always receives a valid { name, email } sender object. */
+const parseSender = (from, fallbackName = 'Carebridge Health') => {
+  if (!from) return null;
+  const match = from.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);
+  if (match) return { name: match[1] || fallbackName, email: match[2] };
+  return { name: fallbackName, email: from.trim() };
 };
 
 const clientUrl = () => {
@@ -60,39 +64,64 @@ export async function sendEmail({ to, subject, text, html, template }) {
 
   const message = { to, subject, text, html, template, createdAt: new Date().toISOString() };
 
-  if (!process.env.RESEND_API_KEY) {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) {
     if (isProduction()) {
       throw new EmailDeliveryError(
-        'Email delivery is not configured on the server. Set RESEND_API_KEY and EMAIL_FROM.'
+        'Email delivery is not configured on the server. Set BREVO_API_KEY and EMAIL_FROM.'
       );
     }
     record(message);
     if (!isTest()) {
       // Never log the token/link itself.
       console.warn(
-        `[email] RESEND_API_KEY not set — captured "${template}" email for ${to} in the development outbox (not sent).`
+        `[email] BREVO_API_KEY not set — captured "${template}" email for ${to} in the development outbox (not sent).`
       );
     }
     return { id: `dev-outbox-${outbox.length}`, dev: true };
   }
 
-  const from = process.env.EMAIL_FROM;
-  if (!from) {
+  const sender = parseSender(process.env.EMAIL_FROM, process.env.EMAIL_FROM_NAME);
+  if (!sender?.email) {
     throw new EmailDeliveryError('EMAIL_FROM is not configured on the server.');
   }
 
-  let result;
+  const payload = {
+    sender,
+    to: [{ email: to }],
+    subject,
+    htmlContent: html,
+    textContent: text,
+  };
+
+  let response;
   try {
-    result = await getClient().emails.send({ from, to, subject, html, text });
+    response = await fetch(BREVO_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'api-key': apiKey,
+        'content-type': 'application/json',
+        accept: 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
   } catch (cause) {
     throw new EmailDeliveryError(undefined, cause);
   }
 
-  if (result?.error) {
-    throw new EmailDeliveryError(undefined, result.error);
+  if (!response.ok) {
+    let detail = null;
+    try {
+      detail = await response.json();
+    } catch {
+      detail = null;
+    }
+    const reason = detail?.message || detail?.error || `Brevo responded with status ${response.status}`;
+    throw new EmailDeliveryError(undefined, { status: response.status, reason, detail });
   }
 
-  return result?.data ?? { id: null };
+  const data = await response.json().catch(() => ({}));
+  return { id: data?.messageId ?? null };
 }
 
 const layout = (heading, body, ctaLabel, ctaUrl) => `

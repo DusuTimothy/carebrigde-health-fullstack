@@ -24,7 +24,7 @@ const login = async (email, password = 'Password123!') => {
 const authorized = (token) => ({ Authorization: `Bearer ${token}` });
 
 /* Verification/reset emails are captured in the development outbox because the
-   test environment has no RESEND_API_KEY. Pull the raw token out of the link. */
+   test environment has no BREVO_API_KEY. Pull the raw token out of the link. */
 const tokenFromOutbox = (template, to) => {
   const message = [...getEmailOutbox()]
     .reverse()

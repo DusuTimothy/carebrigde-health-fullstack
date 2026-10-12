@@ -123,26 +123,27 @@ behind any static host / CDN; run the API with `npm start`.
 | `JWT_EXPIRES_IN` | `7d` | Access-token lifetime |
 | `CORS_ORIGIN` | `http://localhost:5173` | Comma-separated allowed browser origins |
 | `CLIENT_URL` | `CORS_ORIGIN` | Public frontend origin used to build email verification / reset links |
-| `RESEND_API_KEY` | — | Resend API key (backend only); unset in dev captures mail in a dev outbox |
-| `EMAIL_FROM` | — | Verified Resend sender, e.g. `Carebridge Health <no-reply@yourdomain.com>` |
+| `BREVO_API_KEY` | — | Brevo API key (backend only); unset in dev captures mail in a dev outbox |
+| `EMAIL_FROM` | — | Verified Brevo sender, e.g. `Carebridge Health <no-reply@yourdomain.com>` |
+| `EMAIL_FROM_NAME` | `Carebridge Health` | Display name when `EMAIL_FROM` is a bare address (optional) |
 
 All `DB_*` values are environment-only — never use a `VITE_` prefix. In production the API
-refuses to start when TLS is disabled or `JWT_SECRET` is missing/short. `RESEND_API_KEY` is
+refuses to start when TLS is disabled or `JWT_SECRET` is missing/short. `BREVO_API_KEY` is
 server-only and is never exposed through a `VITE_` variable.
 
-### Transactional email (Resend)
+### Transactional email (Brevo)
 
 Signup verification and password reset email is sent through
-[Resend](https://resend.com) from the backend. To configure it:
+[Brevo](https://www.brevo.com) (transactional email API) from the backend. To configure it:
 
-1. Create an API key at <https://resend.com/api-keys> and set `RESEND_API_KEY`.
-2. Add and verify a sending **domain** (or sender address) in Resend, then set
-   `EMAIL_FROM` to it (for quick tests, Resend's `onboarding@resend.dev` sender can only
-   email the account owner).
+1. Create an API key at <https://app.brevo.com/settings/keys/api> (`xkeysib-...`) with the
+   transactional email permission, and set `BREVO_API_KEY`.
+2. Verify a **sender** or your sending **domain** in Brevo (**Senders & IP**), then set
+   `EMAIL_FROM` to it (domain verification needs Brevo's DKIM/SPF DNS records).
 3. Set `CLIENT_URL` to the deployed frontend URL so links resolve correctly.
-4. In production, set all three as host environment variables (never commit them).
+4. In production, set these as host environment variables (never commit them).
 
-Without `RESEND_API_KEY`, development and test mode capture messages in an in-memory
+Without `BREVO_API_KEY`, development and test mode capture messages in an in-memory
 outbox (no tokens are logged) so the flows can be exercised locally; production responds
 with a clear `502` instead of pretending an email was sent.
 
@@ -275,9 +276,9 @@ control, prescription verification, billing payments, clinical workflows and das
 - Build the frontend (`npm run build`) and serve it behind HTTPS; deploy the API with
   `npm start`.
 - Set `NODE_ENV=production`, `DATABASE_SSL=true`, a long random `JWT_SECRET`, your
-  `CORS_ORIGIN`/`CLIENT_URL`, and the Resend variables (`RESEND_API_KEY`, `EMAIL_FROM`).
+  `CORS_ORIGIN`/`CLIENT_URL`, and the Brevo variables (`BREVO_API_KEY`, `EMAIL_FROM`).
   Never enable demo auth (`POST /api/auth/demo` already refuses in production). Without
-  `RESEND_API_KEY` in production, auth email requests fail with a `502` rather than silently
+  `BREVO_API_KEY` in production, auth email requests fail with a `502` rather than silently
   succeeding.
 - Provision staff via the portal or the staff CLI before launch; patients register themselves.
   Staff accounts created by an admin are pre-verified so they can sign in immediately.
