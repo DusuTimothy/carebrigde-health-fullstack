@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User as UserIcon, ShieldCheck, CalendarCheck, MessagesSquare } from 'lucide-react';
+import { Mail, Lock, User as UserIcon, ShieldCheck, CalendarCheck, MessagesSquare, Eye, EyeOff } from 'lucide-react';
 import Input from '../../components/ui/Input.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { LogoMark } from '../../components/layout/PublicHeader.jsx';
@@ -15,18 +15,55 @@ const PERKS = [
   { icon: ShieldCheck, text: 'Secure, NDPA-compliant portal' },
 ];
 
+function PasswordField({ label, value, onChange, visible, onToggle, hint }) {
+  const VisibilityIcon = visible ? EyeOff : Eye;
+
+  return (
+    <div className="relative">
+      <Input
+        label={label}
+        type={visible ? 'text' : 'password'}
+        icon={Lock}
+        hint={hint}
+        minLength={8}
+        maxLength={72}
+        autoComplete="new-password"
+        className="pr-12"
+        value={value}
+        onChange={onChange}
+        required
+      />
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label={`${visible ? 'Hide' : 'Show'} ${label.toLowerCase()}`}
+        aria-pressed={visible}
+        className="absolute right-2 top-7 flex h-8 w-8 items-center justify-center rounded-md text-ink-muted hover:bg-accent-soft hover:text-ink focus:outline-none focus:ring-2 focus:ring-accent/50"
+      >
+        <VisibilityIcon aria-hidden className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
 function SignupPage() {
   const { push } = useToast();
   const navigate = useNavigate();
   const { signup } = useAuth();
   usePageMeta({ title: 'Create an account', description: 'Create a Carebridge Health account to book appointments, message your care team and manage your health records.' });
-  const [form, setForm] = useState({ first: '', last: '', email: '', password: '', dob: '' });
+  const [form, setForm] = useState({ first: '', last: '', email: '', password: '', confirmPassword: '', dob: '' });
   const [error, setError] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
 
   async function submit(e) {
     e.preventDefault();
-    if (!form.first || !form.last || !form.email || !form.password || !form.dob) {
+    if (!form.first || !form.last || !form.email || !form.password || !form.confirmPassword || !form.dob) {
       setError('Please complete all fields.');
+      return;
+    }
+    if (form.password !== form.confirmPassword) {
+      setError('Passwords do not match.');
       return;
     }
     setError('');
@@ -95,7 +132,21 @@ function SignupPage() {
                 <Input label="Last name" value={form.last} onChange={(e) => setForm({ ...form, last: e.target.value })} required />
               </div>
               <Input label="Email" type="email" icon={Mail} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-              <Input label="Password" type="password" icon={Lock} hint="Use at least 8 characters (maximum 72 characters)." minLength={8} maxLength={72} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+              <PasswordField
+                label="Password"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                visible={passwordVisible}
+                onToggle={() => setPasswordVisible((visible) => !visible)}
+                hint="Use at least 8 characters (maximum 72 characters)."
+              />
+              <PasswordField
+                label="Confirm password"
+                value={form.confirmPassword}
+                onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                visible={confirmPasswordVisible}
+                onToggle={() => setConfirmPasswordVisible((visible) => !visible)}
+              />
               <Input label="Date of birth" type="date" value={form.dob} onChange={(e) => setForm({ ...form, dob: e.target.value })} required />
               {error && <p className="text-xs text-danger-ink">{error}</p>}
               <Button type="submit" block size="lg">Create account</Button>
