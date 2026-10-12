@@ -8,6 +8,7 @@ import { IconTile } from '../../components/shared/portal-common.jsx';
 import { useToast } from '../../components/ui/Toast.jsx';
 import { usePageMeta } from '../../lib/seo.js';
 import { LazyBg } from '../../components/ui/Page.jsx';
+import RotatingBg from '../../components/ui/RotatingBg.jsx';
 
 /* Photo cards — modeled on the reference site's primary-care / immediate-care /
    locations / doctor / services / trials image grid. Images are vendored locally. */
@@ -30,6 +31,15 @@ const WHY_CHOOSE = [
   { img: '/images/health/children.jpg', title: "Children's Care", linkLabel: "Learn About Children's Care", to: '/services/pediatric-care' },
   { img: '/images/health/pregnancy.jpg', title: "Women's Health", linkLabel: "Learn About Women's Health", to: '/services/womens-health' },
   { img: '/images/health/behavioral.jpg', title: 'Psychiatry', linkLabel: 'Learn About Psychiatry', to: '/services/psychiatry' },
+];
+
+const HERO_IMAGES = [
+  '/images/health/doctor-portrait2.jpg',
+  '/images/health/hospital-corridor.jpg',
+  '/images/health/doctor-team.jpg',
+  '/images/health/nurses.jpg',
+  '/images/health/senior-rehab.jpg',
+  '/images/health/consult.jpg',
 ];
 
 const NEWS_IMAGES = {
@@ -83,7 +93,7 @@ export default function HomePage() {
     <>
       {/* ================= 1 · HERO — photo + navy, serif headline ================= */}
       <section className="relative overflow-hidden bg-primary-900 text-white">
-        <div aria-hidden className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: 'url(/images/health/doctor-portrait2.jpg)' }} />
+        <RotatingBg images={HERO_IMAGES} className="bg-primary-900" />
         <div aria-hidden className="absolute inset-0 bg-primary-900/60" />
         <div className="relative mx-auto flex w-full max-w-6xl flex-col justify-center px-4 py-20 md:px-6 md:py-28">
           <h1 className="font-display hero-shadow max-w-[20ch] text-5xl font-medium leading-[1.02] tracking-[-0.01em] md:text-6xl">

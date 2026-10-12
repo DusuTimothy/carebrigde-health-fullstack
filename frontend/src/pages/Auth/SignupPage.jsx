@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Mail, User as UserIcon, ShieldCheck, CalendarCheck, MessagesSquare, MailCheck } from 'lucide-react';
 import Input from '../../components/ui/Input.jsx';
 import PasswordInput from '../../components/ui/PasswordInput.jsx';
+import DateInput from '../../components/ui/DateInput.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { LogoMark } from '../../components/layout/PublicHeader.jsx';
 import { useToast } from '../../components/ui/Toast.jsx';
@@ -174,7 +175,14 @@ function SignupPage() {
                     autoComplete="new-password"
                     required
                   />
-                  <Input label="Date of birth" type="date" value={form.dob} onChange={(e) => setForm({ ...form, dob: e.target.value })} required />
+                  <DateInput
+                    label="Date of birth"
+                    value={form.dob}
+                    onChange={(e) => setForm({ ...form, dob: e.target.value })}
+                    max={new Date().toISOString().slice(0, 10)}
+                    min={`${new Date().getFullYear() - 120}-01-01`}
+                    required
+                  />
                   {error && <p className="text-xs text-danger-ink" role="alert">{error}</p>}
                   <Button type="submit" block size="lg" loading={busy}>Create account</Button>
                 </form>

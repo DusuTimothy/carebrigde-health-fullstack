@@ -7,6 +7,7 @@ import { slotTimesFor, slotTimeToString, slotTimeToDate } from '../../lib/seed.j
 import { Stepper } from '../ui/Stepper.jsx';
 import Button from '../ui/Button.jsx';
 import Input, { Textarea } from '../ui/Input.jsx';
+import DateInput from '../ui/DateInput.jsx';
 import Pill from '../ui/Pill.jsx';
 import Alert from '../ui/Alert.jsx';
 import { Rating } from '../shared/portal-common.jsx';
@@ -344,7 +345,7 @@ export default function BookAppointment({ guestMode = false }) {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Input label="Full name" value={guest.name} onChange={(e) => setGuest({ ...guest, name: e.target.value })} placeholder="e.g. Sam Rivera" />
                   <Input label="Phone" value={guest.phone} onChange={(e) => setGuest({ ...guest, phone: e.target.value })} placeholder="+234 800 000 0000" />
-                  <Input label="Date of birth" type="date" value={guest.dob} onChange={(e) => setGuest({ ...guest, dob: e.target.value })} />
+                  <DateInput label="Date of birth" value={guest.dob} onChange={(e) => setGuest({ ...guest, dob: e.target.value })} max={new Date().toISOString().slice(0, 10)} />
                   <Input label="Email (optional)" type="email" value={guest.email} onChange={(e) => setGuest({ ...guest, email: e.target.value })} placeholder="you@email.com" />
                 </div>
               </div>
