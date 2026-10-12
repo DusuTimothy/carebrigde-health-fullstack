@@ -74,8 +74,8 @@ function SignupPage() {
   }
 
   return (
-    <main id="auth-main" className="min-h-screen min-h-dvh! bg-accent-soft">
-      <div className="grid min-h-screen min-h-dvh! lg:grid-cols-2">
+    <main id="auth-main" className="min-h-screen bg-accent-soft">
+      <div className="grid min-h-screen lg:grid-cols-2">
         {/* Left photo panel */}
         <section className="relative hidden flex-col justify-between overflow-hidden text-white lg:flex">
           <LazyBg
